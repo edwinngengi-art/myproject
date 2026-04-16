@@ -15,22 +15,21 @@ const volumeSlider = document.getElementById('volume-slider');
 const timeCurrent = document.getElementById('time-current');
 const timeTotal = document.getElementById('time-total');
 
-// --- 2. NAVIGATION & TABS ---
-// Function to clear results and go back to the featured home page
+// --- 2. NAVIGATION ---
 function goHome() {
     searchView.classList.add('hidden');
     homeView.classList.remove('hidden');
     userInput.value = "";
-    scrollContainer.scrollTo(0, 0); // Scroll center back to top
+    scrollContainer.scrollTo(0, 0);
 }
 
 document.getElementById('logo').addEventListener('click', goHome);
 document.getElementById('nav-home').addEventListener('click', goHome);
 document.getElementById('close-search').addEventListener('click', goHome);
 
-// --- 3. SEARCH & FETCH LOGIC ---
+// --- 3. SEARCH LOGIC (FIXED HTTPS) ---
 searchForm.addEventListener('submit', async (e) => {
-    e.preventDefault(); // Prevents page reload (SPA requirement)
+    e.preventDefault();
     const query = userInput.value.trim();
     if (!query) return;
 
@@ -39,19 +38,23 @@ searchForm.addEventListener('submit', async (e) => {
     scrollContainer.scrollTo(0, 0);
 
     try {
-        // Fetching 25 items so the user can scroll down
-        const res = await fetch(`https://itunes.apple.com/search?term=${encodeURIComponent(query)}&entity=song&limit=25`);
-        const data = await res.json();
-
-        resultsGrid.innerHTML = ""; // Clear existing cards
+        // CRITICAL: Must use https:// to work on GitHub Pages
+        const response = await fetch(`https://itunes.apple.com/search?term=${encodeURIComponent(query)}&entity=song&limit=25`);
+        
+        if (!response.ok) throw new Error('Network response was not ok');
+        
+        const data = await response.json();
+        resultsGrid.innerHTML = ""; 
 
         if (data.results.length > 0) {
             renderAlbums(data.results);
+            document.getElementById('search-title').textContent = `Results for "${query}"`;
         } else {
             document.getElementById('search-title').textContent = "No results found.";
         }
     } catch (err) {
         console.error("Fetch error:", err);
+        document.getElementById('search-title').textContent = "Error loading results. Please check your connection.";
     }
 });
 
@@ -61,12 +64,12 @@ function renderAlbums(songs) {
         const card = document.createElement('div');
         card.className = "bg-zinc-900/60 p-4 rounded-xl hover:bg-zinc-800 transition cursor-pointer group shadow-lg border border-transparent hover:border-zinc-700";
 
-        // Higher resolution images (400x400)
+        // Higher resolution images
         const albumArt = song.artworkUrl100.replace('100x100', '400x400');
 
         card.innerHTML = `
             <div class="relative mb-4 aspect-square">
-                <img src="${albumArt}" class="w-full h-full object-cover rounded-lg">
+                <img src="${albumArt}" class="w-full h-full object-cover rounded-lg" alt="${song.trackName}">
                 <div class="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition">
                     <span class="bg-green-500 text-black p-3 rounded-full shadow-2xl">▶</span>
                 </div>
@@ -75,58 +78,68 @@ function renderAlbums(songs) {
             <p class="text-xs text-zinc-500 truncate">${song.artistName}</p>
         `;
 
-        // Click event to play this specific track
         card.addEventListener('click', () => playTrack(song));
         resultsGrid.appendChild(card);
     });
 }
 
-// --- 5. CORE AUDIO ENGINE & PROGRESS BAR ---
+// --- 5. AUDIO ENGINE ---
 
 function playTrack(song) {
-    musicPlayer.src = song.previewUrl;
-    musicPlayer.play();
+    // Safety: Ensure song URL is HTTPS
+    const secureUrl = song.previewUrl.replace('http://', 'https://');
+    musicPlayer.src = secureUrl;
     
-    // Update the Player Bar UI
+    musicPlayer.play().catch(error => {
+        console.error("Playback failed:", error);
+    });
+
+    // Update Player Bar
     document.getElementById('p-title').textContent = song.trackName;
     document.getElementById('p-artist').textContent = song.artistName;
-    document.getElementById('p-img').src = song.artworkUrl100;
-    playIcon.textContent = "||"; // Change to pause bars
+    document.getElementById('p-img').src = song.artworkUrl100.replace('100x100', '400x400');
+    playIcon.textContent = "||"; 
 }
 
-// Track Time Updates (fires every second while music plays)
+// Update total time when metadata loads
+musicPlayer.addEventListener('loadedmetadata', () => {
+    timeTotal.textContent = formatTime(musicPlayer.duration);
+});
+
+// Progress Bar & Timer
 musicPlayer.addEventListener('timeupdate', () => {
     if (musicPlayer.duration) {
-        // 1. Update Progress Bar Thumb
         const progress = (musicPlayer.currentTime / musicPlayer.duration) * 100;
         seekSlider.value = progress;
-
-        // 2. Update Current Time Text (e.g., 0:12)
-        let curMins = Math.floor(musicPlayer.currentTime / 60);
-        let curSecs = Math.floor(musicPlayer.currentTime % 60);
-        timeCurrent.textContent = `${curMins}:${curSecs < 10 ? '0' : ''}${curSecs}`;
-
-        // 3. Update Total Duration Text
-        let totMins = Math.floor(musicPlayer.duration / 60);
-        let totSecs = Math.floor(musicPlayer.duration % 60);
-        timeTotal.textContent = `${totMins}:${totSecs < 10 ? '0' : ''}${totSecs}`;
+        timeCurrent.textContent = formatTime(musicPlayer.currentTime);
     }
 });
 
-// Scrubbing: Jump to a specific part of the song
+// Scrubbing
 seekSlider.addEventListener('input', () => {
-    const seekTo = (seekSlider.value / 100) * musicPlayer.duration;
-    musicPlayer.currentTime = seekTo;
+    if (!isNaN(musicPlayer.duration)) {
+        const seekTo = (seekSlider.value / 100) * musicPlayer.duration;
+        musicPlayer.currentTime = seekTo;
+    }
 });
 
-// --- 6. VOLUME CONTROL ---
+// Volume
 volumeSlider.addEventListener('input', () => {
-    // Volume expects a value between 0.0 and 1.0
     musicPlayer.volume = volumeSlider.value;
 });
 
-// Play/Pause Toggle
+// Helper: Time Formatter
+function formatTime(seconds) {
+    if (isNaN(seconds)) return "0:00";
+    const mins = Math.floor(seconds / 60);
+    const secs = Math.floor(seconds % 60);
+    return `${mins}:${secs < 10 ? '0' : ''}${secs}`;
+}
+
+// Toggle Play/Pause
 mainPlayBtn.addEventListener('click', () => {
+    if (!musicPlayer.src) return;
+
     if (musicPlayer.paused) {
         musicPlayer.play();
         playIcon.textContent = "||";
@@ -140,4 +153,5 @@ mainPlayBtn.addEventListener('click', () => {
 musicPlayer.addEventListener('ended', () => {
     playIcon.textContent = "▶";
     seekSlider.value = 0;
-}); 
+    timeCurrent.textContent = "0:00";
+});
