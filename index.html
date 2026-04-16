@@ -1,0 +1,100 @@
+   <!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Melodix | Pro Music Player</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Custom Scrollbar for the dark theme */
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: #000; }
+        ::-webkit-scrollbar-thumb { background: #333; border-radius: 10px; }
+        ::-webkit-scrollbar-thumb:hover { background: #1db954; }
+    </style>
+</head>
+<body class=bg-black text-white font-sans h-screen overflow-hidden flex flex-col">
+
+    <nav class="h-16 bg-[#090909] flex items-center justify-between px-6 border-b border-zinc-800 shrink-0 z-50">
+        <h1 id="logo" class="text-green-500 font-black text-2xl tracking-tighter cursor-pointer">MELODIX</h1>
+        
+        <form id="search-form" class="flex w-full max-w-md gap-2">
+            <input type="text" id="user-input" 
+                class="w-full bg-[#1f1f1f] rounded-full px-6 py-2 outline-none focus:ring-2 focus:ring-green-500 text-sm" 
+                placeholder="Search artists or songs...">
+            <button type="submit" class="bg-white text-black font-bold px-6 py-2 rounded-full text-sm hover:bg-zinc-200 transition">
+                Search
+            </button>
+        </form>
+
+        <div class="hidden md:block w-32 text-right text-xs font-bold text-zinc-500">FREE EDITION</div>
+    </nav>
+
+    <div class="flex flex-1 overflow-hidden">
+        
+        <aside class="w-64 bg-black p-6 hidden lg:flex flex-col gap-8 border-r border-zinc-900 shrink-0">
+            <nav class="flex flex-col gap-5 text-zinc-400 font-bold text-sm">
+                <button id="nav-home" class="flex items-center gap-3 hover:text-white transition">🏠 Home</button>
+                <button class="flex items-center gap-3 hover:text-white transition">🔍 Browse</button>
+                <button class="flex items-center gap-3 hover:text-white transition">📚 Library</button>
+            </nav>
+        </aside>
+
+        <main id="scroll-container" class="flex-1 overflow-y-auto bg-gradient-to-b from-[#1e1e1e] to-black p-8 relative">
+            
+            <div id="home-view">
+                <div class="w-full h-64 bg-gradient-to-br from-green-800 to-zinc-900 rounded-2xl mb-10 p-10 flex flex-col justify-end shadow-2xl">
+                    <h2 class="text-6xl font-black mb-2 italic">Natulia</h2>
+                    <p class="text-xl text-zinc-300 mb-6 font-semibold">Artist: Aslay</p>
+                    <button class="bg-green-500 text-black font-bold py-3 px-10 rounded-full w-max hover:scale-105 transition">PLAY NOW</button>
+                </div>
+
+                <h3 class="text-2xl font-bold mb-6">Explore Albums</h3>
+                <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-6 mb-20">
+                    <div class="bg-zinc-900/50 p-4 rounded-xl opacity-20"><div class="aspect-square bg-zinc-800 rounded mb-4"></div></div>
+                    <div class="bg-zinc-900/50 p-4 rounded-xl opacity-20"><div class="aspect-square bg-zinc-800 rounded mb-4"></div></div>
+                </div>
+            </div>
+
+            <div id="search-view" class="hidden pb-24">
+                <div class="flex justify-between items-center mb-8">
+                    <h3 id="search-title" class="text-3xl font-bold">Results</h3>
+                    <button id="close-search" class="text-zinc-500 hover:text-white font-bold">Back ✕</button>
+                </div>
+                <div id="results-grid" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6"></div>
+            </div>
+        </main>
+    </div>
+
+    <footer class="h-24 bg-[#090909] border-t border-zinc-800 px-6 flex items-center justify-between shrink-0 z-50">
+        
+        <div class="flex items-center gap-4 w-1/4">
+            <img id="p-img" src="https://via.placeholder.com/60" class="h-14 w-14 rounded shadow-lg bg-zinc-800">
+            <div class="truncate">
+                <p id="p-title" class="font-bold text-sm truncate text-white">Select a track</p>
+                <p id="p-artist" class="text-xs text-zinc-500 truncate">---</p>
+            </div>
+        </div>
+
+        <div class="flex flex-col items-center w-2/4 max-w-xl gap-2">
+            <button id="main-play-btn" class="bg-white text-black w-10 h-10 rounded-full flex items-center justify-center hover:scale-110 transition shadow-lg">
+                <span id="play-icon">▶</span>
+            </button>
+            <div class="flex items-center w-full gap-3">
+                <span id="time-current" class="text-[10px] text-zinc-500 font-mono w-8 text-right">0:00</span>
+                <input type="range" id="seek-slider" value="0" step="0.1" 
+                    class="flex-1 h-1 bg-zinc-700 rounded-lg appearance-none cursor-pointer accent-green-500">
+                <span id="time-total" class="text-[10px] text-zinc-500 font-mono w-8">0:00</span>
+            </div>
+        </div>
+
+        <div class="w-1/4 flex justify-end items-center gap-3">
+            <span class="text-zinc-500 text-xs">🔊</span>
+            <input type="range" id="volume-slider" min="0" max="1" step="0.01" value="0.8"
+                class="w-24 h-1 bg-zinc-700 rounded-lg appearance-none cursor-pointer accent-green-500">
+        </div>
+    </footer>
+
+    <script src="index.js"></script>
+</body>
+</html>
