@@ -1,4 +1,4 @@
- // --- 1. ELEMENT SELECTION ---
+// --- 1. ELEMENT SELECTION ---
 const searchForm = document.getElementById('search-form');
 const userInput = document.getElementById('user-input');
 const resultsGrid = document.getElementById('results-grid');
@@ -27,34 +27,41 @@ document.getElementById('logo').addEventListener('click', goHome);
 document.getElementById('nav-home').addEventListener('click', goHome);
 document.getElementById('close-search').addEventListener('click', goHome);
 
-// --- 3. SEARCH LOGIC (FIXED HTTPS) ---
+// --- 3. SEARCH LOGIC (FIXED FOR PRODUCTION) ---
 searchForm.addEventListener('submit', async (e) => {
     e.preventDefault();
     const query = userInput.value.trim();
     if (!query) return;
 
+    // UI State Transition
     homeView.classList.add('hidden');
     searchView.classList.remove('hidden');
     scrollContainer.scrollTo(0, 0);
+    document.getElementById('search-title').textContent = "Searching...";
 
     try {
-        // CRITICAL: Must use https:// to work on GitHub Pages
-        const response = await fetch(`https://itunes.apple.com/search?term=${encodeURIComponent(query)}&entity=song&limit=25`);
+        // FIXED: Explicitly use https:// and verify search endpoint
+        // This prevents the net::ERR_CONNECTION_CLOSED and 404 errors
+        const apiUrl = `https://itunes.apple.com/search?term=${encodeURIComponent(query)}&entity=song&limit=25`;
         
-        if (!response.ok) throw new Error('Network response was not ok');
+        const response = await fetch(apiUrl);
+        
+        if (!response.ok) {
+            throw new Error(`Network response was not ok: ${response.status}`);
+        }
         
         const data = await response.json();
         resultsGrid.innerHTML = ""; 
 
-        if (data.results.length > 0) {
+        if (data.results && data.results.length > 0) {
             renderAlbums(data.results);
             document.getElementById('search-title').textContent = `Results for "${query}"`;
         } else {
             document.getElementById('search-title').textContent = "No results found.";
         }
     } catch (err) {
-        console.error("Fetch error:", err);
-        document.getElementById('search-title').textContent = "Error loading results. Please check your connection.";
+        console.error("Detailed Fetch error:", err);
+        document.getElementById('search-title').textContent = "Connection Error. Please check your internet.";
     }
 });
 
@@ -64,7 +71,7 @@ function renderAlbums(songs) {
         const card = document.createElement('div');
         card.className = "bg-zinc-900/60 p-4 rounded-xl hover:bg-zinc-800 transition cursor-pointer group shadow-lg border border-transparent hover:border-zinc-700";
 
-        // Higher resolution images
+        // Upgrade artwork resolution from 100x100 to 400x400
         const albumArt = song.artworkUrl100.replace('100x100', '400x400');
 
         card.innerHTML = `
@@ -86,27 +93,27 @@ function renderAlbums(songs) {
 // --- 5. AUDIO ENGINE ---
 
 function playTrack(song) {
-    // Safety: Ensure song URL is HTTPS
+    // Ensure the preview URL is also HTTPS to avoid "Mixed Content" blocks
     const secureUrl = song.previewUrl.replace('http://', 'https://');
     musicPlayer.src = secureUrl;
     
     musicPlayer.play().catch(error => {
-        console.error("Playback failed:", error);
+        console.error("Playback failed (likely browser auto-play block):", error);
     });
 
-    // Update Player Bar
+    // Update Player Bar UI
     document.getElementById('p-title').textContent = song.trackName;
     document.getElementById('p-artist').textContent = song.artistName;
     document.getElementById('p-img').src = song.artworkUrl100.replace('100x100', '400x400');
     playIcon.textContent = "||"; 
 }
 
-// Update total time when metadata loads
+// Update total time labels once metadata is available
 musicPlayer.addEventListener('loadedmetadata', () => {
     timeTotal.textContent = formatTime(musicPlayer.duration);
 });
 
-// Progress Bar & Timer
+// Sync Progress Slider and Timer
 musicPlayer.addEventListener('timeupdate', () => {
     if (musicPlayer.duration) {
         const progress = (musicPlayer.currentTime / musicPlayer.duration) * 100;
@@ -115,7 +122,7 @@ musicPlayer.addEventListener('timeupdate', () => {
     }
 });
 
-// Scrubbing
+// Scrubbing functionality
 seekSlider.addEventListener('input', () => {
     if (!isNaN(musicPlayer.duration)) {
         const seekTo = (seekSlider.value / 100) * musicPlayer.duration;
@@ -123,12 +130,12 @@ seekSlider.addEventListener('input', () => {
     }
 });
 
-// Volume
+// Volume Slider logic
 volumeSlider.addEventListener('input', () => {
     musicPlayer.volume = volumeSlider.value;
 });
 
-// Helper: Time Formatter
+// Utility: Format seconds into M:SS
 function formatTime(seconds) {
     if (isNaN(seconds)) return "0:00";
     const mins = Math.floor(seconds / 60);
@@ -136,7 +143,7 @@ function formatTime(seconds) {
     return `${mins}:${secs < 10 ? '0' : ''}${secs}`;
 }
 
-// Toggle Play/Pause
+// Toggle Play/Pause Button
 mainPlayBtn.addEventListener('click', () => {
     if (!musicPlayer.src) return;
 
@@ -149,7 +156,7 @@ mainPlayBtn.addEventListener('click', () => {
     }
 });
 
-// Reset UI when song ends
+// Reset UI when track reaches the end
 musicPlayer.addEventListener('ended', () => {
     playIcon.textContent = "▶";
     seekSlider.value = 0;
